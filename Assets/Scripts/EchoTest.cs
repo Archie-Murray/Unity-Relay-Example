@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class EchoTest : NetworkBehaviour {
 
-    private const string Message = "Hello Mr. Server";
+    private const string Message = "Hello, Server";
 
     public override void OnNetworkSpawn() {
         base.OnNetworkSpawn();
