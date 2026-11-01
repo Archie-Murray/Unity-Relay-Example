@@ -53,7 +53,7 @@ public class RelayLobby : MonoBehaviour {
             Debug.Log($"[Lobby] Server started on {data.Endpoint.Address}");
             Debug.Log($"[Lobby] Server Join Code: {joinCode}");
 
-#if UNITY_CLIENT || UNITY_EDITOR
+#if !UNITY_SERVER || UNITY_EDITOR
             CopyCode(joinCode);
             _codeOutput.text = joinCode;
 #endif

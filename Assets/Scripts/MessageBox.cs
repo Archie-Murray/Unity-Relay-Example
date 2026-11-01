@@ -7,7 +7,7 @@ public class MessageBox : MonoBehaviour {
     public static MessageBox Instance;
 
     private void Awake() {
-#if !UNITY_CLIENT || UNITY_EDITOR
+#if !UNITY_SERVER || UNITY_EDITOR
         if (Instance) {
             Debug.LogWarning($"Overriding current instance: {Instance.name} with {name}...", this);
         }
