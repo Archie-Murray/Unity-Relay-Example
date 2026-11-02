@@ -6,6 +6,9 @@ public class MessageBox : MonoBehaviour {
 
     public static MessageBox Instance;
 
+    [SerializeField] private CanvasGroup _messageBox;
+    [SerializeField] private TMP_Text _messageText;
+
     private void Awake() {
 #if !UNITY_SERVER || UNITY_EDITOR
         if (Instance) {
@@ -17,9 +20,6 @@ public class MessageBox : MonoBehaviour {
         _messageBox.alpha = 0;
 #endif
     }
-
-    [SerializeField] private CanvasGroup _messageBox;
-    [SerializeField] private TMP_Text _messageText;
 
     public void ShowMessage(string message) {
         _messageText.text = message;

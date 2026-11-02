@@ -21,8 +21,7 @@ public class ScreenManager : MonoBehaviour {
 #endif
     }
 
-#if UNITY_SERVER
-#else
+#if !UNITY_SERVER
     private void Update() {
         if (Keyboard.current[Key.Escape].wasPressedThisFrame) {
             Screen.fullScreen = false;
