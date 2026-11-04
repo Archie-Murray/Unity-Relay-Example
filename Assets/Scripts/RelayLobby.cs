@@ -13,6 +13,7 @@ using System;
 
 using TMPro;
 using UnityEngine.UI;
+using System.Text;
 
 public class RelayLobby : MonoBehaviour {
     [SerializeField] private TMP_Text _codeOutput;
@@ -79,6 +80,41 @@ public class RelayLobby : MonoBehaviour {
             Debug.Log($"[Lobby] Client connected to {data.Endpoint.Address}");
         } catch (Exception e) {
             Debug.LogError($"[Lobby] Relay client start failed: {e.Message}", this);
+            string error = string.Empty;
+            GetFullException(ref error, e);
+            ErrorBox.Instance.ShowError(error);
+        }
+
+        NetworkManager.Singleton.OnTransportFailure += ClientShowTransportFailure;
+        _transport.OnTransportEvent += ClientShowErrorEvent;
+    }
+
+    private void ClientShowTransportFailure() {
+        ErrorBox.Instance.ShowError($"Unity transport failure (likely failed to find server)");
+    }
+
+    private void ClientShowErrorEvent(NetworkEvent eventType, ulong clientId, ArraySegment<byte> payload, float receiveTime) {
+        int seconds = Mathf.RoundToInt(receiveTime);
+        string payloadString = payload.Count > 0 ? Encoding.UTF8.GetString(payload) : "None";
+        if (eventType == NetworkEvent.TransportFailure) {
+            ErrorBox.Instance.ShowError($"Unity transport failure (likely failed to find any server) at {seconds / 60}m:{seconds % 60}s");
+            ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
+        } else if (eventType == NetworkEvent.Disconnect) {
+            ErrorBox.Instance.ShowError($"Unity transport disconnect (likely that server died or inaccessible?) at {seconds / 60}m:{seconds % 60}s");
+            ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
+        }
+    }
+
+    private void GetFullException(ref string message, Exception e, int depth = 0) {
+        if (depth == 0) {
+            message += $"[Lobby Error] {e.Message}\nIn: {e.StackTrace}";
+        } else {
+            message += "\n------------------------------";
+            message += $"\n{e.Message}\nIn: {e.StackTrace}";
+        }
+
+        if (e.InnerException != null) {
+            GetFullException(ref message, e.InnerException, depth += 1);
         }
     }
 
