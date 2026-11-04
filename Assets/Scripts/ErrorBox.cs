@@ -27,13 +27,15 @@ public class ErrorBox : MonoBehaviour {
     public void ShowError(string message) {
         _messageText.text += message;
         _messageBox.alpha = 1;
+        _messageBox.interactable = true;
+        _messageBox.blocksRaycasts = true;
     }
 
     private void CopyError() {
         TextEditor editor = new TextEditor() {
             text = _messageText.text
         };
-
+        editor.SelectAll();
         editor.Copy();
     }
 

@@ -31,12 +31,24 @@ public class RelayLobby : MonoBehaviour {
         StartServer();
 #else
         _codeCopy.onClick.AddListener(() => CopyCode(_codeOutput.text));
+        _codeCopy.gameObject.SetActive(false);
         _startServer.onClick.AddListener(StartServer);
         _startClient.onClick.AddListener(StartClient);
+
+        NetworkManager.Singleton.OnTransportFailure += ShowTransportFailure;
+        _transport.OnTransportEvent += ShowErrorEvent;
 #endif
     }
 
     private async void StartServer() {
+#if !UNITY_SERVER
+        _codeInput.gameObject.SetActive(false);
+        _startClient.gameObject.SetActive(false);
+        _startServer.gameObject.SetActive(false);
+        _codeCopy.interactable = false;
+        _codeCopy.gameObject.SetActive(true);
+#endif
+
         await UnityServices.InitializeAsync();
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
 
@@ -54,16 +66,29 @@ public class RelayLobby : MonoBehaviour {
             Debug.Log($"[Lobby] Server started on {data.Endpoint.Address}");
             Debug.Log($"[Lobby] Server Join Code: {joinCode}");
 
-#if !UNITY_SERVER || UNITY_EDITOR
+#if !UNITY_SERVER
             CopyCode(joinCode);
             _codeOutput.text = joinCode;
+            _codeCopy.interactable = true;
+            MessageBox.Instance.ShowMessage("Server Started...");
 #endif
         } catch (Exception e) {
-            Debug.LogError($"[Lobby] Relay server start failed: {e.Message}", this);
+            string error = string.Empty;
+            GetFullException(ref error, e);
+            Debug.LogError($"[Lobby] Relay server start failed: {error}", this);
+#if !UNITY_SERVER
+            ErrorBox.Instance.ShowError($"[Lobby]: Failed to start lobby...\n{error}");
+#endif
         }
+
     }
 
     private async void StartClient() {
+        _codeInput.gameObject.SetActive(false);
+        _codeCopy.gameObject.SetActive(false);
+        _startClient.gameObject.SetActive(false);
+        _startServer.gameObject.SetActive(false);
+
         await UnityServices.InitializeAsync();
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
 
@@ -84,24 +109,31 @@ public class RelayLobby : MonoBehaviour {
             GetFullException(ref error, e);
             ErrorBox.Instance.ShowError(error);
         }
-
-        NetworkManager.Singleton.OnTransportFailure += ClientShowTransportFailure;
-        _transport.OnTransportEvent += ClientShowErrorEvent;
     }
 
-    private void ClientShowTransportFailure() {
+    private void ShowTransportFailure() {
         ErrorBox.Instance.ShowError($"Unity transport failure (likely failed to find server)");
     }
 
-    private void ClientShowErrorEvent(NetworkEvent eventType, ulong clientId, ArraySegment<byte> payload, float receiveTime) {
+    private void ShowErrorEvent(NetworkEvent eventType, ulong clientId, ArraySegment<byte> payload, float receiveTime) {
         int seconds = Mathf.RoundToInt(receiveTime);
         string payloadString = payload.Count > 0 ? Encoding.UTF8.GetString(payload) : "None";
-        if (eventType == NetworkEvent.TransportFailure) {
-            ErrorBox.Instance.ShowError($"Unity transport failure (likely failed to find any server) at {seconds / 60}m:{seconds % 60}s");
-            ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
-        } else if (eventType == NetworkEvent.Disconnect) {
-            ErrorBox.Instance.ShowError($"Unity transport disconnect (likely that server died or inaccessible?) at {seconds / 60}m:{seconds % 60}s");
-            ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
+        if (NetworkManager.Singleton.IsClient) {
+            if (eventType == NetworkEvent.TransportFailure) {
+                ErrorBox.Instance.ShowError($"Unity transport failure:\nLikely failed to find any server\nTime of failure: {seconds / 60}m:{seconds % 60}s");
+                ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
+            } else if (eventType == NetworkEvent.Disconnect) {
+                ErrorBox.Instance.ShowError($"Unity transport disconnect\nLikely that server died or inaccessible?\nTime of failure: {seconds / 60}m:{seconds % 60}s");
+                ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
+            }
+        } else if (NetworkManager.Singleton.IsServer) {
+            if (eventType == NetworkEvent.TransportFailure) {
+                ErrorBox.Instance.ShowError($"Unity transport failure:\nCould server could not start for some reason?\nTime of failure: {seconds / 60}m:{seconds % 60}s");
+                ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
+            } else if (eventType == NetworkEvent.Disconnect) {
+                ErrorBox.Instance.ShowError($"Unity transport disconnect (Lost connection?)\nTime of failure: {seconds / 60}m:{seconds % 60}s");
+                ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
+            }
         }
     }
 
