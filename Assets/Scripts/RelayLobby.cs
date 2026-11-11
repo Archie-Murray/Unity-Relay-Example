@@ -53,7 +53,7 @@ public class RelayLobby : MonoBehaviour {
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
 
         try {
-            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(1);
+            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(5);
             string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
             RelayServerData data = allocation.ToRelayServerData(GetConnectionType());
