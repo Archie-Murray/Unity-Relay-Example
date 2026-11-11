@@ -56,7 +56,7 @@ public class RelayLobby : MonoBehaviour {
             Allocation allocation = await RelayService.Instance.CreateAllocationAsync(1);
             string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
-            RelayServerData data = allocation.ToRelayServerData("dtls");
+            RelayServerData data = allocation.ToRelayServerData(GetConnectionType());
             _transport.SetRelayServerData(data);
 
             if (!NetworkManager.Singleton.StartServer()) {
@@ -95,7 +95,7 @@ public class RelayLobby : MonoBehaviour {
         try {
             string joinCode = _codeInput.text.Trim();
             JoinAllocation allocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
-            RelayServerData data = allocation.ToRelayServerData("dtls");
+            RelayServerData data = allocation.ToRelayServerData(GetConnectionType());
             _transport.SetRelayServerData(data);
 
             if (!NetworkManager.Singleton.StartClient()) {
@@ -161,5 +161,13 @@ public class RelayLobby : MonoBehaviour {
         editor.text = code.Trim().ToUpper();
         editor.SelectAll();
         editor.Copy();
+    }
+
+    private string GetConnectionType() {
+#if !UNITY_WEBGL
+        return "dtls";
+#else
+        return "wss";
+#endif
     }
 }

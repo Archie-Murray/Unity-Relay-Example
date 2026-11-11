@@ -7,6 +7,10 @@ A basic example of the required networking for using Unity's Relay Service allow
 
 ## How to use
 
+#### Web Build
+Visit [GitHub Pages Hosted Web Build](https://archie-murray.github.io/Unity-Relay-Example) or open your own local build in two different browsers and manually type the code into a client - unfortunately the copy feature does not work on web builds for now.
+
+#### Native Builds:
 Run the server and client, and monitor the server console log for a message like this:
 ```console
 [Lobby] Server Join Code: <6 Digit Join Code Here>
