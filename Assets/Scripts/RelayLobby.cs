@@ -15,8 +15,13 @@ using TMPro;
 using UnityEngine.UI;
 using System.Text;
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+using System.Runtime.InteropServices;
+#endif
+
 public class RelayLobby : MonoBehaviour {
     [SerializeField] private TMP_Text _codeOutput;
+    [SerializeField] private TMP_Text _connectedClientCount;
     [SerializeField] private TMP_InputField _codeInput;
     [SerializeField] private UnityTransport _transport;
     [SerializeField] private Button _codeCopy;
@@ -25,7 +30,8 @@ public class RelayLobby : MonoBehaviour {
 
     private void Start() {
         _transport = NetworkManager.Singleton.NetworkConfig.NetworkTransport as UnityTransport;
-        NetworkManager.Singleton.OnClientConnectedCallback += OnJoin;
+        NetworkManager.Singleton.OnClientConnectedCallback += OnConnect;
+        NetworkManager.Singleton.OnClientDisconnectCallback += OnDisconnect;
 
 #if UNITY_SERVER
         StartServer();
@@ -126,14 +132,14 @@ public class RelayLobby : MonoBehaviour {
                 ErrorBox.Instance.ShowError($"Unity transport disconnect\nLikely that server died or inaccessible?\nTime of failure: {seconds / 60}m:{seconds % 60}s");
                 ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
             }
-        } else if (NetworkManager.Singleton.IsServer) {
-            if (eventType == NetworkEvent.TransportFailure) {
-                ErrorBox.Instance.ShowError($"Unity transport failure:\nCould server could not start for some reason?\nTime of failure: {seconds / 60}m:{seconds % 60}s");
-                ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
-            } else if (eventType == NetworkEvent.Disconnect) {
-                ErrorBox.Instance.ShowError($"Unity transport disconnect (Lost connection?)\nTime of failure: {seconds / 60}m:{seconds % 60}s");
-                ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
-            }
+            // } else if (NetworkManager.Singleton.IsServer) {
+            //     if (eventType == NetworkEvent.TransportFailure) {
+            //         ErrorBox.Instance.ShowError($"Unity transport failure:\nCould server could not start for some reason?\nTime of failure: {seconds / 60}m:{seconds % 60}s");
+            //         ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
+            //     } else if (eventType == NetworkEvent.Disconnect) {
+            //         ErrorBox.Instance.ShowError($"Unity transport disconnect (Lost connection?)\nTime of failure: {seconds / 60}m:{seconds % 60}s");
+            //         ErrorBox.Instance.ShowError($"\nPayload: {payloadString}");
+            //     }
         }
     }
 
@@ -150,17 +156,44 @@ public class RelayLobby : MonoBehaviour {
         }
     }
 
-    private void OnJoin(ulong client) {
+    private void OnConnect(ulong client) {
         if (NetworkManager.Singleton.IsConnectedClient) {
             _codeInput.gameObject.SetActive(false);
         }
+
+#if !UNITY_SERVER
+        if (NetworkManager.Singleton.IsServer) {
+            _connectedClientCount.text = $"Connected Clients: {NetworkManager.Singleton.ConnectedClientsIds.Count}";
+        }
+#endif
     }
 
+    private void OnDisconnect(ulong client) {
+        if (NetworkManager.Singleton.IsConnectedClient) {
+            _codeInput.gameObject.SetActive(false);
+        }
+
+#if !UNITY_SERVER
+        if (NetworkManager.Singleton.IsServer) {
+            _connectedClientCount.text = $"Connected Clients: {NetworkManager.Singleton.ConnectedClientsIds.Count}";
+        }
+#endif
+    }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [DllImport("__Internal")]
+    public extern static void CopyToClipboard(string text);
+#endif
+
     private void CopyCode(string code) {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        CopyToClipboard(code.Trim().ToUpper());
+#else
         TextEditor editor = new TextEditor();
         editor.text = code.Trim().ToUpper();
         editor.SelectAll();
         editor.Copy();
+#endif
     }
 
     private string GetConnectionType() {
